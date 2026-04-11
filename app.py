@@ -81,7 +81,7 @@ if st.button("🔍 Predict Churn"):
         st.success(f"💎 Loyal Customer ({prob:.2f})")
         st.info("💡 Suggestion: Upsell and reward loyalty.")
 
-    # SHAP Explanation
+    # 🔥 SHAP Explanation with side panel
     st.markdown("### 🧠 Why this prediction?")
 
     shap_values = explainer.shap_values(data)
@@ -92,7 +92,7 @@ if st.button("🔍 Predict Churn"):
         values = shap_values
 
     values = np.array(values).reshape(-1)
-    values = values[:3]  # match feature count
+    values = values[:3]
 
     feature_names = ['Frequency', 'Monetary ($)', 'Cluster']
 
@@ -101,11 +101,29 @@ if st.button("🔍 Predict Churn"):
         'Impact': values
     }).sort_values(by='Impact', key=abs, ascending=False)
 
-    fig, ax = plt.subplots()
-    colors = ['green' if v < 0 else 'red' for v in shap_df['Impact']]
-    ax.barh(shap_df['Feature'], shap_df['Impact'], color=colors)
-    ax.set_title("Feature Impact on Prediction")
-    st.pyplot(fig)
+    # Create two columns
+    col1, col2 = st.columns([2, 1])
+
+    # LEFT: SHAP chart
+    with col1:
+        fig, ax = plt.subplots()
+        colors = ['green' if v < 0 else 'red' for v in shap_df['Impact']]
+        ax.barh(shap_df['Feature'], shap_df['Impact'], color=colors)
+        ax.set_title("Feature Impact on Prediction")
+        st.pyplot(fig)
+
+    # RIGHT: Explanation
+    with col2:
+        st.write("### 📖 Explanation")
+
+        for _, row in shap_df.iterrows():
+            feature = row['Feature']
+            impact = row['Impact']
+
+            if impact > 0:
+                st.write(f"🔴 **{feature}** increases churn risk")
+            else:
+                st.write(f"🟢 **{feature}** reduces churn risk")
 
 # Feature Importance (Global)
 st.markdown("---")
