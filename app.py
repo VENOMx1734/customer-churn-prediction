@@ -11,6 +11,14 @@ model = joblib.load("final_model.pkl")
 # SHAP explainer
 explainer = shap.TreeExplainer(model)
 
+# Cluster labels (NEW 🔥)
+cluster_names = {
+    0: "High Value",
+    1: "Low Value",
+    2: "At Risk",
+    3: "New Customers"
+}
+
 # Page config
 st.set_page_config(page_title="Churn Prediction", layout="centered")
 
@@ -33,7 +41,18 @@ st.write("### 📊 Enter Customer Details")
 # Inputs
 frequency = st.slider("📦 Frequency (Number of Purchases)", 0, 100, 5)
 monetary = st.slider("💰 Monetary Value (Total Spend)", 0, 10000, 500)
-cluster = st.selectbox("👥 Customer Segment (Cluster)", [0, 1, 2, 3])
+
+# 🔥 Cluster selectbox with labels
+cluster_label = st.selectbox(
+    "👥 Customer Segment",
+    list(cluster_names.values())
+)
+
+# Convert label → number
+cluster = [k for k, v in cluster_names.items() if v == cluster_label][0]
+
+# Show selected segment
+st.info(f"Selected Segment: {cluster_label}")
 
 st.markdown("---")
 
@@ -46,7 +65,7 @@ if st.button("🔍 Predict Churn"):
 
     st.markdown("## 🔎 Prediction Result")
 
-    # Risk Level
+    # Risk Levels
     if prob > 0.7:
         st.error(f"🔥 High Risk Customer ({prob:.2f})")
         st.warning("💡 Suggestion: Immediate retention campaign required.")
@@ -57,7 +76,7 @@ if st.button("🔍 Predict Churn"):
         st.success(f"💎 Loyal Customer ({prob:.2f})")
         st.info("💡 Suggestion: Upsell and reward loyalty.")
 
-    # SHAP Explanation
+    # 🔥 SHAP Explanation
     st.markdown("### 🧠 Why this prediction?")
 
     shap_values = explainer.shap_values(data)
@@ -83,7 +102,7 @@ if st.button("🔍 Predict Churn"):
     ax.set_title("Feature Impact on Prediction")
     st.pyplot(fig)
 
-# Feature Importance
+# 🔥 Feature Importance (Global)
 st.markdown("---")
 st.write("### 📊 Model Feature Importance")
 
@@ -99,4 +118,4 @@ st.pyplot(fig)
 
 # Footer
 st.markdown("---")
-st.write("Built by Loq | Machine Learning Project 🚀")
+st.write("Built by Vignesh M Naik | Data Science Project 🚀")
