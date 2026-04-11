@@ -11,7 +11,7 @@ model = joblib.load("final_model.pkl")
 # SHAP explainer
 explainer = shap.TreeExplainer(model)
 
-# Cluster labels (NEW 🔥)
+# Cluster labels
 cluster_names = {
     0: "High Value",
     1: "Low Value",
@@ -40,18 +40,18 @@ st.write("### 📊 Enter Customer Details")
 
 # Inputs
 frequency = st.slider("📦 Frequency (Number of Purchases)", 0, 100, 5)
-monetary = st.slider("💰 Monetary Value (Total Spend)", 0, 10000, 500)
 
-# 🔥 Cluster selectbox with labels
+monetary = st.slider("💰 Total Spend ($)", 0, 10000, 500)
+st.write(f"💵 Selected Spending: ${monetary:,.2f}")
+
 cluster_label = st.selectbox(
     "👥 Customer Segment",
     list(cluster_names.values())
 )
 
-# Convert label → number
+# Convert label → numeric cluster
 cluster = [k for k, v in cluster_names.items() if v == cluster_label][0]
 
-# Show selected segment
 st.info(f"Selected Segment: {cluster_label}")
 
 st.markdown("---")
@@ -65,7 +65,12 @@ if st.button("🔍 Predict Churn"):
 
     st.markdown("## 🔎 Prediction Result")
 
-    # Risk Levels
+    # Show inputs nicely
+    st.write(f"📦 Frequency: {frequency}")
+    st.write(f"💰 Spending: ${monetary:,.2f}")
+    st.write(f"👥 Segment: {cluster_label}")
+
+    # Risk levels
     if prob > 0.7:
         st.error(f"🔥 High Risk Customer ({prob:.2f})")
         st.warning("💡 Suggestion: Immediate retention campaign required.")
@@ -76,7 +81,7 @@ if st.button("🔍 Predict Churn"):
         st.success(f"💎 Loyal Customer ({prob:.2f})")
         st.info("💡 Suggestion: Upsell and reward loyalty.")
 
-    # 🔥 SHAP Explanation
+    # SHAP Explanation
     st.markdown("### 🧠 Why this prediction?")
 
     shap_values = explainer.shap_values(data)
@@ -87,9 +92,9 @@ if st.button("🔍 Predict Churn"):
         values = shap_values
 
     values = np.array(values).reshape(-1)
-    values = values[:3]  # match features
+    values = values[:3]  # match feature count
 
-    feature_names = ['Frequency', 'Monetary', 'Cluster']
+    feature_names = ['Frequency', 'Monetary ($)', 'Cluster']
 
     shap_df = pd.DataFrame({
         'Feature': feature_names,
@@ -102,7 +107,7 @@ if st.button("🔍 Predict Churn"):
     ax.set_title("Feature Impact on Prediction")
     st.pyplot(fig)
 
-# 🔥 Feature Importance (Global)
+# Feature Importance (Global)
 st.markdown("---")
 st.write("### 📊 Model Feature Importance")
 
