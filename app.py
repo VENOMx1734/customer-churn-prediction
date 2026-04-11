@@ -24,8 +24,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Title
+# Title + Description
 st.markdown("<h1>Customer Churn Prediction System</h1>", unsafe_allow_html=True)
+st.write("This app predicts customer churn based on behavioral patterns and provides actionable business insights.")
 
 st.write("### 📊 Enter Customer Details")
 
@@ -38,47 +39,64 @@ st.markdown("---")
 
 # Prediction
 if st.button("🔍 Predict Churn"):
+    
     data = np.array([[frequency, monetary, cluster]])
 
     prob = model.predict_proba(data)[0][1]
 
     st.markdown("## 🔎 Prediction Result")
 
-    if prob > 0.5:
-        st.error(f"⚠️ High Churn Risk: {prob:.2f}")
-        st.warning("💡 Suggestion: Offer discounts or re-engagement campaigns.")
+    # Risk Level
+    if prob > 0.7:
+        st.error(f"🔥 High Risk Customer ({prob:.2f})")
+        st.warning("💡 Suggestion: Immediate retention campaign required.")
+    elif prob > 0.4:
+        st.warning(f"⚠️ Medium Risk Customer ({prob:.2f})")
+        st.info("💡 Suggestion: Engage with offers and recommendations.")
     else:
-        st.success(f"✅ Low Churn Risk: {prob:.2f}")
-        st.info("💡 Suggestion: Customer is loyal. Try upselling strategies.")
+        st.success(f"💎 Loyal Customer ({prob:.2f})")
+        st.info("💡 Suggestion: Upsell and reward loyalty.")
 
-    # 🔥 SHAP Explanation
+    # SHAP Explanation
     st.markdown("### 🧠 Why this prediction?")
 
     shap_values = explainer.shap_values(data)
 
-    # Handle different SHAP formats safely
     if isinstance(shap_values, list):
-        values = shap_values[1]  # class 1
+        values = shap_values[1]
     else:
         values = shap_values
 
-    # Convert to numpy and flatten
     values = np.array(values).reshape(-1)
+    values = values[:3]  # match features
 
-    # Ensure correct length (match features)
     feature_names = ['Frequency', 'Monetary', 'Cluster']
 
-    # 🔥 FIX: Trim or match length
-    values = values[:len(feature_names)]
-
-    # Create DataFrame
     shap_df = pd.DataFrame({
-    'Feature': feature_names,
-    'Impact': values
+        'Feature': feature_names,
+        'Impact': values
     }).sort_values(by='Impact', key=abs, ascending=False)
 
-    # Plot
     fig, ax = plt.subplots()
-    ax.barh(shap_df['Feature'], shap_df['Impact'],color=['green' if v < 0 else 'red' for v in shap_df['Impact']])
+    colors = ['green' if v < 0 else 'red' for v in shap_df['Impact']]
+    ax.barh(shap_df['Feature'], shap_df['Impact'], color=colors)
     ax.set_title("Feature Impact on Prediction")
     st.pyplot(fig)
+
+# Feature Importance
+st.markdown("---")
+st.write("### 📊 Model Feature Importance")
+
+importance = pd.DataFrame({
+    'Feature': ['Cluster', 'Frequency', 'Monetary'],
+    'Importance': [0.73, 0.16, 0.07]
+})
+
+fig, ax = plt.subplots()
+ax.bar(importance['Feature'], importance['Importance'])
+ax.set_ylabel("Importance")
+st.pyplot(fig)
+
+# Footer
+st.markdown("---")
+st.write("Built by Loq | Machine Learning Project 🚀")
