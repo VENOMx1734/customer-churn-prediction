@@ -15,3 +15,6 @@ Python, Streamlit, Scikit-learn, SHAP
 ## Run Locally
 pip install -r requirements.txt
 streamlit run app.py
+
+## 🌐 Live Demo
+https://customer-churn-prediction-6dziadttpnbwzecn7vdump.streamlit.app/
