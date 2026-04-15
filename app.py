@@ -30,7 +30,9 @@ st.write("Predict churn, understand why, and take action.")
 st.markdown("## 🔹 Single Customer Prediction")
 
 frequency = st.slider("📦 Monthly Orders", 0, 50, 5)
-monetary = st.slider("💰 Avg Spend per Customer ($)", 0, 500, 50)
+
+# ✅ UPDATED HERE
+monetary = st.slider("💰 Avg Spend per Customer ($)", 0, 1000, 100)
 st.write(f"💵 Selected Spending: ${monetary:,.2f}")
 
 cluster_label = st.selectbox("👥 Customer Segment", list(cluster_names.values()))
