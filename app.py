@@ -3,106 +3,60 @@ import joblib
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import shap
 
 # Load model
 model = joblib.load("final_model.pkl")
 
-# SHAP explainer
-explainer = shap.TreeExplainer(model)
+st.set_page_config(page_title="Churn Dashboard", layout="wide")
 
-# Cluster labels
-cluster_names = {
-    0: "High Value (Frequent + High Spend)",
-    1: "Low Value (Infrequent + Low Spend)",
-    2: "At Risk (Previously active, now inactive)",
-    3: "New Customers (Recently acquired)"
-}
+# ---------------- HERO ---------------- #
+st.title("🚀 Find Customers You’re About to Lose")
 
-# Page config
-st.set_page_config(page_title="Churn Prediction", layout="centered")
+st.write("""
+Identify high-risk customers in seconds and take action before they churn.
 
-# Title
-st.title("Customer Churn Prediction System")
-st.write("Predict churn, understand why, and take action.")
+👉 Upload your data or try a sample dataset  
+👉 Get insights + recommended actions instantly  
+""")
 
-# ---------------- SINGLE CUSTOMER ---------------- #
-st.markdown("## 🔹 Single Customer Prediction")
+# ---------------- SAMPLE DATA ---------------- #
+if st.button("⚡ Try with Sample Data"):
+    st.session_state['data'] = pd.DataFrame({
+        'Frequency': [2, 10, 5, 1, 8, 3, 12],
+        'Monetary': [50, 300, 120, 20, 250, 80, 400],
+        'Cluster': [3, 0, 2, 1, 0, 2, 0]
+    })
 
-frequency = st.slider("📦 Monthly Orders", 0, 50, 5)
+# ---------------- FILE UPLOAD ---------------- #
+st.markdown("## 📄 Upload Your Customer Data")
 
-# ✅ UPDATED HERE
-monetary = st.slider("💰 Avg Spend per Customer ($)", 0, 1000, 100)
-st.write(f"💵 Selected Spending: ${monetary:,.2f}")
+st.markdown("""
+Required columns:
+- Frequency → number of purchases  
+- Monetary → average spend ($)  
+- Cluster → optional (default will be used if missing)
+""")
 
-cluster_label = st.selectbox("👥 Customer Segment", list(cluster_names.values()))
-cluster = [k for k, v in cluster_names.items() if v == cluster_label][0]
+uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
 
-st.info(f"Selected Segment: {cluster_label}")
-
-if st.button("🔍 Predict Churn"):
-    
-    data = np.array([[frequency, monetary, cluster]])
-    prob = model.predict_proba(data)[0][1]
-
-    st.markdown("## 🔎 Prediction Result")
-
-    if prob > 0.7:
-        st.error(f"🔥 High Risk ({prob:.2f})")
-        st.warning("💡 Immediate retention campaign required.")
-    elif prob > 0.4:
-        st.warning(f"⚠️ Medium Risk ({prob:.2f})")
-        st.info("💡 Engage with offers.")
-    else:
-        st.success(f"💎 Low Risk ({prob:.2f})")
-        st.info("💡 Upsell opportunity.")
-
-    # SHAP
-    st.markdown("### 🧠 Why this prediction?")
-
-    shap_values = explainer.shap_values(data)
-    values = shap_values[1] if isinstance(shap_values, list) else shap_values
-    values = np.array(values).reshape(-1)[:3]
-
-    feature_names = ['Frequency', 'Monetary ($)', 'Cluster']
-
-    shap_df = pd.DataFrame({
-        'Feature': feature_names,
-        'Impact': values
-    }).sort_values(by='Impact', key=abs, ascending=False)
-
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        fig, ax = plt.subplots()
-        colors = ['green' if v < 0 else 'red' for v in shap_df['Impact']]
-        ax.barh(shap_df['Feature'], shap_df['Impact'], color=colors)
-        ax.set_title("Feature Impact")
-        st.pyplot(fig)
-
-    with col2:
-        st.write("### 📖 Explanation")
-        for _, row in shap_df.iterrows():
-            if row['Impact'] > 0:
-                st.write(f"🔴 {row['Feature']} increases churn")
-            else:
-                st.write(f"🟢 {row['Feature']} reduces churn")
-
-# ---------------- BULK PREDICTION ---------------- #
-st.markdown("---")
-st.markdown("## 📊 Bulk Prediction Dashboard")
-
-uploaded_file = st.file_uploader("Upload CSV (Frequency, Monetary, Cluster)", type=["csv"])
+# ---------------- DATA SOURCE ---------------- #
+df = None
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    st.write("### 📄 Uploaded Data")
-    st.dataframe(df.head())
+elif 'data' in st.session_state:
+    df = st.session_state['data']
+
+# ---------------- MAIN DASHBOARD ---------------- #
+if df is not None:
+
+    # Handle missing cluster
+    if 'Cluster' not in df.columns:
+        df['Cluster'] = 2  # default (At Risk assumption)
 
     try:
         X = df[['Frequency', 'Monetary', 'Cluster']]
-
         probs = model.predict_proba(X)[:, 1]
 
         df['Churn Probability'] = probs
@@ -112,35 +66,49 @@ if uploaded_file:
             labels=["Low", "Medium", "High"]
         )
 
-        # Dashboard
-        st.markdown("## 📊 Summary Dashboard")
+        # ---------------- METRICS ---------------- #
+        st.markdown("## 📊 Overview")
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
 
-        col1.metric("Total Customers", len(df))
+        col1.metric("Customers", len(df))
         col2.metric("High Risk", (df['Risk Level'] == "High").sum())
-        col3.metric("Avg Churn", f"{df['Churn Probability'].mean():.2f}")
+        col3.metric("Avg Churn", f"{df['Churn Probability'].mean():.0%}")
+        col4.metric("Max Risk", f"{df['Churn Probability'].max():.0%}")
 
-        # Chart
-        st.markdown("### 📈 Risk Distribution")
+        # ---------------- CHART ---------------- #
+        st.markdown("## 📈 Risk Distribution")
 
         fig, ax = plt.subplots()
         df['Risk Level'].value_counts().plot(kind='bar', ax=ax)
         st.pyplot(fig)
 
-        # Insights
-        st.markdown("## 🧠 Insights")
+        # ---------------- INSIGHTS ---------------- #
+        st.markdown("## 🧠 Key Insights")
 
         high_pct = (df['Risk Level'] == "High").mean() * 100
 
         if high_pct > 30:
-            st.error("⚠️ High churn risk across customers!")
+            st.error("⚠️ High churn risk — immediate action needed")
         elif high_pct > 15:
-            st.warning("⚠️ Moderate churn risk detected.")
+            st.warning("⚠️ Moderate churn risk — monitor closely")
         else:
-            st.success("✅ Customer base stable.")
+            st.success("✅ Customer base is stable")
 
-        # Top customers
+        # ---------------- ACTIONS ---------------- #
+        st.markdown("## 🎯 What Should You Do?")
+
+        high_count = (df['Risk Level'] == "High").sum()
+
+        if high_count > 0:
+            st.write(f"👉 Focus on {high_count} high-risk customers")
+            st.write("👉 Send targeted discounts or offers")
+            st.write("👉 Re-engage inactive users via email")
+            st.write("👉 Prioritize high-value customers")
+        else:
+            st.write("✅ No urgent churn risk — focus on growth")
+
+        # ---------------- TOP CUSTOMERS ---------------- #
         st.markdown("## 🔥 Top At-Risk Customers")
 
         top_risk = df[df['Risk Level'] == "High"].sort_values(
@@ -149,19 +117,39 @@ if uploaded_file:
 
         st.dataframe(top_risk.head(10))
 
-        # Download
+        # ---------------- OPTIONAL CLUSTER VIEW ---------------- #
+        st.markdown("## ⚙️ Advanced (Optional)")
+
+        if st.checkbox("Show Customer Segments (Clusters)"):
+            st.write("Cluster 0 = High Value")
+            st.write("Cluster 1 = Low Value")
+            st.write("Cluster 2 = At Risk")
+            st.write("Cluster 3 = New Customers")
+
+        # ---------------- DOWNLOAD ---------------- #
         csv = df.to_csv(index=False).encode('utf-8')
 
         st.download_button(
             "📥 Download Results",
             csv,
-            "churn_predictions.csv",
+            "churn_results.csv",
             "text/csv"
         )
 
     except:
-        st.error("⚠️ CSV must contain: Frequency, Monetary, Cluster")
+        st.error("⚠️ Ensure CSV has Frequency, Monetary, Cluster")
+
+# ---------------- HOW IT WORKS ---------------- #
+st.markdown("---")
+st.markdown("## ⚙️ How It Works")
+
+st.write("""
+We analyze customer behavior (orders + spending),
+predict churn risk using machine learning,
+and highlight who you should act on.
+""")
 
 # Footer
 st.markdown("---")
+st.caption("Built using customer behavior data (RFM + ML)")
 st.write("Built by Vignesh M Naik | Data Science Project 🚀")
