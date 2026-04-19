@@ -10,134 +10,132 @@ model = joblib.load("final_model.pkl")
 st.set_page_config(page_title="Churn Dashboard", layout="wide")
 
 # ---------------- HERO ---------------- #
-st.title("🚀 Find Customers You’re About to Lose")
+st.title("🚀 Stop Losing Customers Before It Happens")
 
 st.write("""
-Identify high-risk customers in seconds and take action before they churn.
+Understand which customers are likely to churn and what actions to take — instantly.
 
-👉 Upload your data or try a sample dataset  
-👉 Get insights + recommended actions instantly  
+👉 Simulate your business  
+👉 See churn risk  
+👉 Take action  
 """)
 
-# ---------------- SAMPLE DATA ---------------- #
-if st.button("⚡ Try with Sample Data"):
-    st.session_state['data'] = pd.DataFrame({
-        'Frequency': [2, 10, 5, 1, 8, 3, 12],
-        'Monetary': [50, 300, 120, 20, 250, 80, 400],
-        'Cluster': [3, 0, 2, 1, 0, 2, 0]
+# ---------------- SIMULATION ---------------- #
+st.markdown("## ⚡ Simulate Your Business")
+
+col1, col2, col3 = st.columns(3)
+
+num_customers = col1.slider("Customers", 50, 1000, 200)
+avg_orders = col2.slider("Monthly Orders", 1, 20, 5)
+avg_spend = col3.slider("Avg Spend ($)", 10, 500, 100)
+
+if st.button("Generate Insights"):
+
+    np.random.seed(42)
+
+    df = pd.DataFrame({
+        'Frequency': np.random.poisson(avg_orders, num_customers),
+        'Monetary': np.random.normal(avg_spend, 30, num_customers).clip(10),
+        'Cluster': np.random.choice([0,1,2,3], num_customers)
     })
 
-# ---------------- FILE UPLOAD ---------------- #
-st.markdown("## 📄 Upload Your Customer Data")
+    st.session_state['data'] = df
 
-st.markdown("""
-Required columns:
-- Frequency → number of purchases  
-- Monetary → average spend ($)  
-- Cluster → optional (default will be used if missing)
-""")
-
+# ---------------- OPTIONAL CSV ---------------- #
+st.markdown("### 📄 Or Upload Your Data (Optional)")
 uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
-
-# ---------------- DATA SOURCE ---------------- #
-df = None
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
+    st.session_state['data'] = df
 
-elif 'data' in st.session_state:
+# ---------------- DASHBOARD ---------------- #
+if 'data' in st.session_state:
+
     df = st.session_state['data']
 
-# ---------------- MAIN DASHBOARD ---------------- #
-if df is not None:
-
-    # Handle missing cluster
     if 'Cluster' not in df.columns:
-        df['Cluster'] = 2  # default (At Risk assumption)
+        df['Cluster'] = 2
 
-    try:
-        X = df[['Frequency', 'Monetary', 'Cluster']]
-        probs = model.predict_proba(X)[:, 1]
+    X = df[['Frequency', 'Monetary', 'Cluster']]
+    probs = model.predict_proba(X)[:, 1]
 
-        df['Churn Probability'] = probs
-        df['Risk Level'] = pd.cut(
-            probs,
-            bins=[0, 0.4, 0.7, 1],
-            labels=["Low", "Medium", "High"]
-        )
+    df['Churn Probability'] = probs
+    df['Risk Level'] = pd.cut(
+        probs,
+        bins=[0, 0.4, 0.7, 1],
+        labels=["Low", "Medium", "High"]
+    )
 
-        # ---------------- METRICS ---------------- #
-        st.markdown("## 📊 Overview")
+    # ---------------- METRICS (CARDS STYLE) ---------------- #
+    st.markdown("## 📊 Overview")
 
-        col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
 
-        col1.metric("Customers", len(df))
-        col2.metric("High Risk", (df['Risk Level'] == "High").sum())
-        col3.metric("Avg Churn", f"{df['Churn Probability'].mean():.0%}")
-        col4.metric("Max Risk", f"{df['Churn Probability'].max():.0%}")
+    total = len(df)
+    high = (df['Risk Level'] == "High").sum()
+    avg = df['Churn Probability'].mean()
+    max_risk = df['Churn Probability'].max()
 
-        # ---------------- CHART ---------------- #
-        st.markdown("## 📈 Risk Distribution")
+    col1.metric("Customers", total)
+    col2.metric("High Risk", high)
+    col3.metric("Avg Churn", f"{avg:.0%}")
+    col4.metric("Max Risk", f"{max_risk:.0%}")
 
-        fig, ax = plt.subplots()
+    # ---------------- SMALL CHART ---------------- #
+    st.markdown("## 📈 Risk Breakdown")
+
+    col1, col2 = st.columns([1,2])
+
+    with col1:
+        fig, ax = plt.subplots(figsize=(3,3))
         df['Risk Level'].value_counts().plot(kind='bar', ax=ax)
+        ax.set_title("")
+        ax.set_xlabel("")
+        ax.set_ylabel("")
         st.pyplot(fig)
 
-        # ---------------- INSIGHTS ---------------- #
-        st.markdown("## 🧠 Key Insights")
+    with col2:
+        st.markdown("### 🧠 What This Means")
 
         high_pct = (df['Risk Level'] == "High").mean() * 100
 
         if high_pct > 30:
-            st.error("⚠️ High churn risk — immediate action needed")
+            st.error("⚠️ High churn risk — you're losing customers fast")
         elif high_pct > 15:
-            st.warning("⚠️ Moderate churn risk — monitor closely")
+            st.warning("⚠️ Moderate churn — needs attention")
         else:
-            st.success("✅ Customer base is stable")
+            st.success("✅ Customer base looks stable")
 
-        # ---------------- ACTIONS ---------------- #
-        st.markdown("## 🎯 What Should You Do?")
+    # ---------------- ACTIONS ---------------- #
+    st.markdown("## 🎯 What Should You Do?")
 
-        high_count = (df['Risk Level'] == "High").sum()
+    if high > 0:
+        st.write(f"👉 {high} customers are at risk — prioritize them")
+        st.write("👉 Send targeted discounts or offers")
+        st.write("👉 Re-engage inactive users")
+        st.write("👉 Focus on high-value segments first")
+    else:
+        st.write("✅ No urgent churn risk — focus on growth")
 
-        if high_count > 0:
-            st.write(f"👉 Focus on {high_count} high-risk customers")
-            st.write("👉 Send targeted discounts or offers")
-            st.write("👉 Re-engage inactive users via email")
-            st.write("👉 Prioritize high-value customers")
-        else:
-            st.write("✅ No urgent churn risk — focus on growth")
+    # ---------------- TOP USERS ---------------- #
+    st.markdown("## 🔥 Customers to Act On")
 
-        # ---------------- TOP CUSTOMERS ---------------- #
-        st.markdown("## 🔥 Top At-Risk Customers")
+    top_risk = df[df['Risk Level'] == "High"].sort_values(
+        by='Churn Probability', ascending=False
+    )
 
-        top_risk = df[df['Risk Level'] == "High"].sort_values(
-            by='Churn Probability', ascending=False
-        )
+    st.dataframe(top_risk.head(10))
 
-        st.dataframe(top_risk.head(10))
+    # ---------------- DOWNLOAD ---------------- #
+    csv = df.to_csv(index=False).encode('utf-8')
 
-        # ---------------- OPTIONAL CLUSTER VIEW ---------------- #
-        st.markdown("## ⚙️ Advanced (Optional)")
-
-        if st.checkbox("Show Customer Segments (Clusters)"):
-            st.write("Cluster 0 = High Value")
-            st.write("Cluster 1 = Low Value")
-            st.write("Cluster 2 = At Risk")
-            st.write("Cluster 3 = New Customers")
-
-        # ---------------- DOWNLOAD ---------------- #
-        csv = df.to_csv(index=False).encode('utf-8')
-
-        st.download_button(
-            "📥 Download Results",
-            csv,
-            "churn_results.csv",
-            "text/csv"
-        )
-
-    except:
-        st.error("⚠️ Ensure CSV has Frequency, Monetary, Cluster")
+    st.download_button(
+        "📥 Download Results",
+        csv,
+        "churn_results.csv",
+        "text/csv"
+    )
 
 # ---------------- HOW IT WORKS ---------------- #
 st.markdown("---")
@@ -146,10 +144,8 @@ st.markdown("## ⚙️ How It Works")
 st.write("""
 We analyze customer behavior (orders + spending),
 predict churn risk using machine learning,
-and highlight who you should act on.
+and show you exactly who to focus on.
 """)
 
-# Footer
-st.markdown("---")
-st.caption("Built using customer behavior data (RFM + ML)")
+st.caption("Built using customer behavior modeling (RFM + ML)")
 st.write("Built by Vignesh M Naik | Data Science Project 🚀")
