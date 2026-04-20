@@ -13,26 +13,29 @@ st.set_page_config(page_title="Churn Dashboard", layout="wide")
 st.markdown("""
 <style>
 .metric-card {
-    padding: 15px;
-    border-radius: 12px;
-    background-color: #111827;
-    border: 1px solid #1f2937;
+    padding: 18px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #0f172a, #020617);
+    border: 1px solid #1e293b;
     text-align: center;
 }
 .metric-title {
-    font-size: 14px;
-    color: #9ca3af;
+    font-size: 13px;
+    color: #94a3b8;
 }
 .metric-value {
-    font-size: 28px;
+    font-size: 30px;
     font-weight: bold;
 }
 .card {
-    padding: 15px;
-    border-radius: 12px;
-    background-color: #111827;
-    border: 1px solid #1f2937;
-    margin-bottom: 10px;
+    padding:15px;
+    border-radius:12px;
+    background:#0f172a;
+    border:1px solid #1e293b;
+    margin-bottom:10px;
+}
+h2 {
+    margin-top: 20px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -133,36 +136,44 @@ if 'data' in st.session_state:
     </div>
     """, unsafe_allow_html=True)
 
-    # ---------------- CHART ---------------- #
+    # ---------------- SUMMARY ---------------- #
+    st.markdown(f"""
+    ### 💡 Summary
+
+    Out of {total} customers, **{high} are at high risk of churning**.
+    """)
+
+    # ---------------- CHURN DISTRIBUTION ---------------- #
+    st.markdown("## 📊 Churn Risk Distribution")
+
+    fig, ax = plt.subplots(figsize=(5,3))
+    ax.hist(df['Churn Probability'], bins=20)
+    ax.set_xlabel("Churn Probability")
+    ax.set_ylabel("Customers")
+
+    st.pyplot(fig)
+
+    # Risk counts
+    high_count = (df['Churn Probability'] > 0.7).sum()
+    mid_count = ((df['Churn Probability'] > 0.4) & (df['Churn Probability'] <= 0.7)).sum()
+    low_count = (df['Churn Probability'] <= 0.4).sum()
+
+    st.write(f"""
+🟢 Low Risk: {low_count}  
+🟡 Medium Risk: {mid_count}  
+🔴 High Risk: {high_count}  
+""")
+
+    # ---------------- REVENUE AT RISK ---------------- #
     st.markdown("## 📉 Revenue at Risk")
 
     risk_summary = df.groupby('Risk Level')['Monetary'].sum()
+    revenue_at_risk = risk_summary.get("High", 0)
 
-    col1, col2 = st.columns([1,2])
-
-    with col1:
-        fig, ax = plt.subplots(figsize=(3,3))
-        risk_summary.plot(kind='bar', ax=ax)
-        ax.set_title("")
-        ax.set_ylabel("$")
-        ax.set_xlabel("")
-        st.pyplot(fig)
-
-    with col2:
-        revenue_at_risk = risk_summary.get("High", 0)
-
-        st.markdown("### 💡 Key Insight")
-
+    if revenue_at_risk > 0:
         st.error(f"⚠️ ${revenue_at_risk:,.0f} revenue is at risk")
-
-        high_pct = (df['Risk Level'] == "High").mean() * 100
-
-        if high_pct > 30:
-            st.write("You are losing a large portion of customers.")
-        elif high_pct > 15:
-            st.write("Churn is moderate and needs attention.")
-        else:
-            st.write("Customer base looks stable.")
+    else:
+        st.success("✅ No revenue is currently at risk")
 
     # ---------------- ACTIONS ---------------- #
     st.markdown("## 🎯 What Should You Do?")
@@ -175,23 +186,28 @@ if 'data' in st.session_state:
     else:
         st.write("✅ No urgent churn risk — focus on growth")
 
-    # ---------------- ACTION CARDS ---------------- #
+    # ---------------- GRID CARDS ---------------- #
     st.markdown("## 🔥 Customers You Should Act On")
 
     top_risk = df[df['Risk Level'] == "High"].sort_values(
         by='Churn Probability', ascending=False
-    ).head(5)
+    ).head(6)
 
-    for i, row in top_risk.iterrows():
-        st.markdown(f"""
-        <div class="card">
-            <b>Customer #{i}</b><br><br>
-            🔴 Risk: <b>{row['Churn Probability']:.0%}</b><br>
-            📦 Orders: {int(row['Frequency'])}<br>
-            💰 Spend: ${row['Monetary']:.0f}<br><br>
-            👉 <b>Action:</b> Send targeted offer / re-engagement email
-        </div>
-        """, unsafe_allow_html=True)
+    cols = st.columns(3)
+
+    for i, (_, row) in enumerate(top_risk.iterrows()):
+        col = cols[i % 3]
+
+        with col:
+            st.markdown(f"""
+            <div class="card">
+                <b>Customer</b><br><br>
+                🔴 Risk: <b>{row['Churn Probability']:.0%}</b><br>
+                📦 Orders: {int(row['Frequency'])}<br>
+                💰 Spend: ${row['Monetary']:.0f}<br><br>
+                👉 Action: Offer discount / re-engage
+            </div>
+            """, unsafe_allow_html=True)
 
     # ---------------- DOWNLOAD ---------------- #
     csv = df.to_csv(index=False).encode('utf-8')
