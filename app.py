@@ -34,9 +34,6 @@ st.markdown("""
     border:1px solid #1e293b;
     margin-bottom:10px;
 }
-h2 {
-    margin-top: 20px;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -45,28 +42,75 @@ st.title("🚀 Stop Losing Customers Before It Happens")
 
 st.write("""
 Understand which customers are likely to churn and what actions to take — instantly.
+""")
 
-👉 Simulate your business  
-👉 See churn risk  
-👉 Take action  
+# ---------------- GUIDE ---------------- #
+with st.expander("📘 How to Use This Tool (Quick Guide)"):
+
+    st.markdown("""
+### 🎯 What This Tool Does
+Simulates your customer base and predicts churn risk.
+
+---
+
+### 🧩 Inputs Explained
+
+**Total Customers**
+- Number of customers in your business  
+
+**Avg Orders per Customer**
+- How often customers purchase  
+
+**Avg Spend ($)**
+- Average revenue per customer  
+
+**Customer Variation**
+- How different customers are  
+- Low → similar behavior  
+- High → mix of loyal + inactive  
+
+---
+
+### 📊 What Matters Most
+
+✔ High churn %  
+✔ High-value customers churning  
+✔ Low-frequency customers  
+
+---
+
+### ⚠️ What Doesn’t Matter Much
+
+❌ Exact customer count  
+❌ Small changes in averages  
+
+---
+
+### 💡 Key Insight
+
+Losing a few high-value customers is worse than losing many low-value ones.
 """)
 
 # ---------------- SIMULATION ---------------- #
 st.markdown("## ⚡ Simulate Your Business")
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
-num_customers = col1.slider("Customers", 50, 1000, 200)
-avg_orders = col2.slider("Monthly Orders", 1, 20, 5)
-avg_spend = col3.slider("Avg Spend ($)", 10, 1000, 100)
+num_customers = col1.slider("Total Customers", 50, 1000, 200)
+avg_orders = col2.slider("Avg Orders per Customer", 1, 20, 5)
+avg_spend = col3.slider("Avg Spend per Customer ($)", 10, 1000, 100)
+variation = col4.slider("Customer Variation", 0.1, 1.0, 0.5)
 
 if st.button("Generate Insights"):
 
     np.random.seed(42)
 
+    freq_std = avg_orders * variation
+    spend_std = avg_spend * variation
+
     df = pd.DataFrame({
-        'Frequency': np.random.poisson(avg_orders, num_customers),
-        'Monetary': np.random.normal(avg_spend, 30, num_customers).clip(10),
+        'Frequency': np.random.normal(avg_orders, freq_std, num_customers).clip(1),
+        'Monetary': np.random.normal(avg_spend, spend_std, num_customers).clip(10),
         'Cluster': np.random.choice([0,1,2,3], num_customers)
     })
 
@@ -138,10 +182,10 @@ if 'data' in st.session_state:
 
     # ---------------- SUMMARY ---------------- #
     st.markdown(f"""
-    ### 💡 Summary
+### 💡 Summary
 
-    Out of {total} customers, **{high} are at high risk of churning**.
-    """)
+Out of **{total} customers**, **{high} are at high risk of churning**.
+""")
 
     # ---------------- CHURN DISTRIBUTION ---------------- #
     st.markdown("## 📊 Churn Risk Distribution")
@@ -153,7 +197,6 @@ if 'data' in st.session_state:
 
     st.pyplot(fig)
 
-    # Risk counts
     high_count = (df['Churn Probability'] > 0.7).sum()
     mid_count = ((df['Churn Probability'] > 0.4) & (df['Churn Probability'] <= 0.7)).sum()
     low_count = (df['Churn Probability'] <= 0.4).sum()
@@ -224,9 +267,8 @@ st.markdown("---")
 st.markdown("## ⚙️ How It Works")
 
 st.write("""
-We analyze customer behavior (orders + spending),
-predict churn risk using machine learning,
-and show you exactly who to focus on.
+We simulate customer behavior, predict churn using machine learning,
+and highlight which customers you should focus on.
 """)
 
 st.caption("Built using customer behavior modeling (RFM + ML)")
