@@ -21,7 +21,7 @@ st.markdown("""
 }
 .metric-title {
     font-size: 13px;
-    color: #94a3b8;
+    color: #94a3af;
 }
 .metric-value {
     font-size: 30px;
@@ -41,7 +41,7 @@ st.markdown("""
 st.title("🚀 Stop Losing Customers Before It Happens")
 st.write("Predict churn, understand risk, and take action instantly.")
 
-# ---------------- GUIDE (EXACT VERSION) ---------------- #
+# ---------------- EXACT GUIDE ---------------- #
 with st.expander("📘 How to Use This Tool (Detailed Guide)"):
 
     st.markdown("""
@@ -136,6 +136,45 @@ Not all customers are equal.
 Losing a few **high-value customers** is often worse than losing many low-value ones.
 """)
 
+# ---------------- CSV GUIDE ---------------- #
+with st.expander("📄 How to Upload Your CSV File"):
+
+    st.markdown("""
+### 📁 Required Columns
+
+Your CSV must include:
+
+- Frequency → Number of purchases  
+- Monetary → Amount spent  
+- Cluster → Optional (if missing, system assumes default)
+
+---
+
+### 📊 Example Format
+
+Frequency,Monetary,Cluster  
+5,200,0  
+2,50,3  
+10,500,1  
+
+---
+
+### ⚠️ Common Mistakes
+
+❌ Wrong column names  
+❌ Missing columns  
+❌ Extra spaces  
+
+---
+
+### 💡 Where to Get This Data
+
+- Shopify  
+- Stripe  
+- CRM systems  
+- Excel exports  
+""")
+
 # ---------------- SIMULATION ---------------- #
 st.markdown("## ⚡ Simulate Your Business")
 
@@ -146,18 +185,26 @@ avg_orders = col2.slider("Avg Orders per Customer (Monthly)", 1, 20, 5)
 avg_spend = col3.slider("Avg Spend per Customer ($)", 10, 1000, 100)
 variation = col4.slider("Customer Variation", 0.1, 1.0, 0.5)
 
+# ---------------- CSV UPLOAD ---------------- #
+st.markdown("## 📄 Or Upload Your Data")
+
+uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+
 if st.button("Generate Insights"):
 
-    np.random.seed(42)
+    if uploaded_file:
+        df = pd.read_csv(uploaded_file)
+    else:
+        np.random.seed(42)
 
-    freq_std = avg_orders * variation
-    spend_std = avg_spend * variation
+        freq_std = avg_orders * variation
+        spend_std = avg_spend * variation
 
-    df = pd.DataFrame({
-        'Frequency': np.random.normal(avg_orders, freq_std, num_customers).clip(1),
-        'Monetary': np.random.normal(avg_spend, spend_std, num_customers).clip(10),
-        'Cluster': np.random.choice([0,1,2,3], num_customers)
-    })
+        df = pd.DataFrame({
+            'Frequency': np.random.normal(avg_orders, freq_std, num_customers).clip(1),
+            'Monetary': np.random.normal(avg_spend, spend_std, num_customers).clip(10),
+            'Cluster': np.random.choice([0,1,2,3], num_customers)
+        })
 
     st.session_state['data'] = df
 
@@ -165,6 +212,9 @@ if st.button("Generate Insights"):
 if 'data' in st.session_state:
 
     df = st.session_state['data']
+
+    if 'Cluster' not in df.columns:
+        df['Cluster'] = 2
 
     X = df[['Frequency', 'Monetary', 'Cluster']]
     probs = model.predict_proba(X)[:, 1]
@@ -201,7 +251,7 @@ if 'data' in st.session_state:
 
     st.pyplot(fig)
 
-    # ---------------- EXACT CHART EXPLANATION ---------------- #
+    # ---------------- EXACT CHART GUIDE ---------------- #
     st.markdown("### 🧠 How to Read This Chart")
 
     st.markdown("""
@@ -287,9 +337,9 @@ This chart helps you understand:
         st.write("👉 Offer discounts / incentives")
         st.write("👉 Improve engagement")
     else:
-        st.write("✅ Focus on growth strategies")
+        st.write("✅ Focus on growth")
 
-    # ---------------- GRID CARDS ---------------- #
+    # ---------------- CARDS ---------------- #
     st.markdown("## 🔥 Customers You Should Act On")
 
     top_risk = df[df['Risk Level'] == "High"].sort_values(
@@ -311,5 +361,5 @@ This chart helps you understand:
 
 # ---------------- FOOTER ---------------- #
 st.markdown("---")
-st.caption("Built as a decision tool for founders 🚀")
+st.caption("Built for founders to understand churn instantly 🚀")
 st.write("Built by Vignesh M Naik | Data Science Project 🚀")
