@@ -9,6 +9,34 @@ model = joblib.load("final_model.pkl")
 
 st.set_page_config(page_title="Churn Dashboard", layout="wide")
 
+# ---------------- STYLE ---------------- #
+st.markdown("""
+<style>
+.metric-card {
+    padding: 15px;
+    border-radius: 12px;
+    background-color: #111827;
+    border: 1px solid #1f2937;
+    text-align: center;
+}
+.metric-title {
+    font-size: 14px;
+    color: #9ca3af;
+}
+.metric-value {
+    font-size: 28px;
+    font-weight: bold;
+}
+.card {
+    padding: 15px;
+    border-radius: 12px;
+    background-color: #111827;
+    border: 1px solid #1f2937;
+    margin-bottom: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------- HERO ---------------- #
 st.title("🚀 Stop Losing Customers Before It Happens")
 
@@ -27,7 +55,7 @@ col1, col2, col3 = st.columns(3)
 
 num_customers = col1.slider("Customers", 50, 1000, 200)
 avg_orders = col2.slider("Monthly Orders", 1, 20, 5)
-avg_spend = col3.slider("Avg Spend ($)", 10, 500, 100)
+avg_spend = col3.slider("Avg Spend ($)", 10, 1000, 100)
 
 if st.button("Generate Insights"):
 
@@ -67,7 +95,7 @@ if 'data' in st.session_state:
         labels=["Low", "Medium", "High"]
     )
 
-    # ---------------- METRICS (CARDS STYLE) ---------------- #
+    # ---------------- METRICS ---------------- #
     st.markdown("## 📊 Overview")
 
     col1, col2, col3, col4 = st.columns(4)
@@ -75,57 +103,95 @@ if 'data' in st.session_state:
     total = len(df)
     high = (df['Risk Level'] == "High").sum()
     avg = df['Churn Probability'].mean()
-    max_risk = df['Churn Probability'].max()
+    revenue = df['Monetary'].sum()
 
-    col1.metric("Customers", total)
-    col2.metric("High Risk", high)
-    col3.metric("Avg Churn", f"{avg:.0%}")
-    col4.metric("Max Risk", f"{max_risk:.0%}")
+    col1.markdown(f"""
+    <div class="metric-card">
+    <div class="metric-title">Customers</div>
+    <div class="metric-value">{total}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # ---------------- SMALL CHART ---------------- #
-    st.markdown("## 📈 Risk Breakdown")
+    col2.markdown(f"""
+    <div class="metric-card">
+    <div class="metric-title">High Risk</div>
+    <div class="metric-value">{high}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col3.markdown(f"""
+    <div class="metric-card">
+    <div class="metric-title">Avg Churn</div>
+    <div class="metric-value">{avg:.0%}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col4.markdown(f"""
+    <div class="metric-card">
+    <div class="metric-title">Revenue</div>
+    <div class="metric-value">${revenue:,.0f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ---------------- CHART ---------------- #
+    st.markdown("## 📉 Revenue at Risk")
+
+    risk_summary = df.groupby('Risk Level')['Monetary'].sum()
 
     col1, col2 = st.columns([1,2])
 
     with col1:
         fig, ax = plt.subplots(figsize=(3,3))
-        df['Risk Level'].value_counts().plot(kind='bar', ax=ax)
+        risk_summary.plot(kind='bar', ax=ax)
         ax.set_title("")
+        ax.set_ylabel("$")
         ax.set_xlabel("")
-        ax.set_ylabel("")
         st.pyplot(fig)
 
     with col2:
-        st.markdown("### 🧠 What This Means")
+        revenue_at_risk = risk_summary.get("High", 0)
+
+        st.markdown("### 💡 Key Insight")
+
+        st.error(f"⚠️ ${revenue_at_risk:,.0f} revenue is at risk")
 
         high_pct = (df['Risk Level'] == "High").mean() * 100
 
         if high_pct > 30:
-            st.error("⚠️ High churn risk — you're losing customers fast")
+            st.write("You are losing a large portion of customers.")
         elif high_pct > 15:
-            st.warning("⚠️ Moderate churn — needs attention")
+            st.write("Churn is moderate and needs attention.")
         else:
-            st.success("✅ Customer base looks stable")
+            st.write("Customer base looks stable.")
 
     # ---------------- ACTIONS ---------------- #
     st.markdown("## 🎯 What Should You Do?")
 
     if high > 0:
-        st.write(f"👉 {high} customers are at risk — prioritize them")
-        st.write("👉 Send targeted discounts or offers")
+        st.write(f"👉 Focus on {high} high-risk customers")
+        st.write("👉 Offer discounts or incentives")
         st.write("👉 Re-engage inactive users")
-        st.write("👉 Focus on high-value segments first")
+        st.write("👉 Prioritize high-value users")
     else:
         st.write("✅ No urgent churn risk — focus on growth")
 
-    # ---------------- TOP USERS ---------------- #
-    st.markdown("## 🔥 Customers to Act On")
+    # ---------------- ACTION CARDS ---------------- #
+    st.markdown("## 🔥 Customers You Should Act On")
 
     top_risk = df[df['Risk Level'] == "High"].sort_values(
         by='Churn Probability', ascending=False
-    )
+    ).head(5)
 
-    st.dataframe(top_risk.head(10))
+    for i, row in top_risk.iterrows():
+        st.markdown(f"""
+        <div class="card">
+            <b>Customer #{i}</b><br><br>
+            🔴 Risk: <b>{row['Churn Probability']:.0%}</b><br>
+            📦 Orders: {int(row['Frequency'])}<br>
+            💰 Spend: ${row['Monetary']:.0f}<br><br>
+            👉 <b>Action:</b> Send targeted offer / re-engagement email
+        </div>
+        """, unsafe_allow_html=True)
 
     # ---------------- DOWNLOAD ---------------- #
     csv = df.to_csv(index=False).encode('utf-8')
