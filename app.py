@@ -39,56 +39,101 @@ st.markdown("""
 
 # ---------------- HERO ---------------- #
 st.title("🚀 Stop Losing Customers Before It Happens")
+st.write("Predict churn, understand risk, and take action instantly.")
 
-st.write("""
-Understand which customers are likely to churn and what actions to take — instantly.
-""")
-
-# ---------------- GUIDE ---------------- #
-with st.expander("📘 How to Use This Tool (Quick Guide)"):
+# ---------------- GUIDE (EXACT VERSION) ---------------- #
+with st.expander("📘 How to Use This Tool (Detailed Guide)"):
 
     st.markdown("""
-### 🎯 What This Tool Does
-Simulates your customer base and predicts churn risk.
+## 🎯 What This Tool Actually Does
+
+This tool simulates your customer base and predicts **which customers are likely to stop buying (churn)**.
+
+It helps you:
+- Identify risky customers  
+- Understand how serious the problem is  
+- Take action before losing revenue  
 
 ---
 
-### 🧩 Inputs Explained
+## 🧩 Understanding the Inputs
 
-**Total Customers**
-- Number of customers in your business  
-
-**Avg Orders per Customer**
-- How often customers purchase  
-
-**Avg Spend ($)**
-- Average revenue per customer  
-
-**Customer Variation**
-- How different customers are  
-- Low → similar behavior  
-- High → mix of loyal + inactive  
+### 👥 Total Customers
+- Total number of customers in your business  
+- Used to estimate overall churn impact  
+- More customers = more total risk (but not always worse %)
 
 ---
 
-### 📊 What Matters Most
+### 📦 Avg Orders per Customer (Monthly)
+- How often customers buy from you  
+- Higher = more engaged customers  
+- Lower = more likely to churn  
 
-✔ High churn %  
+👉 Example:
+- 2 orders/month → weak engagement  
+- 10 orders/month → strong retention  
+
+---
+
+### 💰 Avg Spend per Customer ($)
+- How much revenue each customer brings  
+- This determines **how valuable each customer is**
+
+👉 Important:
+Losing 1 high-spend customer can hurt more than losing 10 low-spend customers  
+
+---
+
+### 🎚 Customer Variation
+- Controls how different your customers are  
+
+👉 Low variation:
+- Everyone behaves similarly  
+- Stable business  
+
+👉 High variation:
+- Mix of:
+  - loyal customers  
+  - inactive users  
+  - risky users  
+
+👉 This is **very realistic** for most startups  
+
+---
+
+## 📊 What Matters Most (Focus Here)
+
+✔ High churn percentage  
 ✔ High-value customers churning  
 ✔ Low-frequency customers  
 
 ---
 
-### ⚠️ What Doesn’t Matter Much
+## ⚠️ What Doesn’t Matter Much
 
 ❌ Exact customer count  
-❌ Small changes in averages  
+❌ Small slider changes  
+❌ Perfect accuracy  
 
 ---
 
-### 💡 Key Insight
+## 🎯 How to Use This Tool (Step-by-Step)
 
-Losing a few high-value customers is worse than losing many low-value ones.
+1. Adjust sliders to match your business  
+2. Click **Generate Insights**  
+3. Focus on:
+   - High-risk customers  
+   - Revenue at risk  
+   - Recommended actions  
+
+---
+
+## 💡 Key Insight
+
+Not all customers are equal.
+
+Losing a few **high-value customers** is often worse than losing many low-value ones.
 """)
 
 # ---------------- SIMULATION ---------------- #
@@ -97,7 +142,7 @@ st.markdown("## ⚡ Simulate Your Business")
 col1, col2, col3, col4 = st.columns(4)
 
 num_customers = col1.slider("Total Customers", 50, 1000, 200)
-avg_orders = col2.slider("Avg Orders per Customer", 1, 20, 5)
+avg_orders = col2.slider("Avg Orders per Customer (Monthly)", 1, 20, 5)
 avg_spend = col3.slider("Avg Spend per Customer ($)", 10, 1000, 100)
 variation = col4.slider("Customer Variation", 0.1, 1.0, 0.5)
 
@@ -116,21 +161,10 @@ if st.button("Generate Insights"):
 
     st.session_state['data'] = df
 
-# ---------------- OPTIONAL CSV ---------------- #
-st.markdown("### 📄 Or Upload Your Data (Optional)")
-uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
-
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    st.session_state['data'] = df
-
 # ---------------- DASHBOARD ---------------- #
 if 'data' in st.session_state:
 
     df = st.session_state['data']
-
-    if 'Cluster' not in df.columns:
-        df['Cluster'] = 2
 
     X = df[['Frequency', 'Monetary', 'Cluster']]
     probs = model.predict_proba(X)[:, 1]
@@ -145,49 +179,19 @@ if 'data' in st.session_state:
     # ---------------- METRICS ---------------- #
     st.markdown("## 📊 Overview")
 
-    col1, col2, col3, col4 = st.columns(4)
-
     total = len(df)
     high = (df['Risk Level'] == "High").sum()
     avg = df['Churn Probability'].mean()
     revenue = df['Monetary'].sum()
 
-    col1.markdown(f"""
-    <div class="metric-card">
-    <div class="metric-title">Customers</div>
-    <div class="metric-value">{total}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2, col3, col4 = st.columns(4)
 
-    col2.markdown(f"""
-    <div class="metric-card">
-    <div class="metric-title">High Risk</div>
-    <div class="metric-value">{high}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    col1.markdown(f"<div class='metric-card'><div class='metric-title'>Customers</div><div class='metric-value'>{total}</div></div>", unsafe_allow_html=True)
+    col2.markdown(f"<div class='metric-card'><div class='metric-title'>High Risk</div><div class='metric-value'>{high}</div></div>", unsafe_allow_html=True)
+    col3.markdown(f"<div class='metric-card'><div class='metric-title'>Avg Churn</div><div class='metric-value'>{avg:.0%}</div></div>", unsafe_allow_html=True)
+    col4.markdown(f"<div class='metric-card'><div class='metric-title'>Revenue</div><div class='metric-value'>${revenue:,.0f}</div></div>", unsafe_allow_html=True)
 
-    col3.markdown(f"""
-    <div class="metric-card">
-    <div class="metric-title">Avg Churn</div>
-    <div class="metric-value">{avg:.0%}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col4.markdown(f"""
-    <div class="metric-card">
-    <div class="metric-title">Revenue</div>
-    <div class="metric-value">${revenue:,.0f}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ---------------- SUMMARY ---------------- #
-    st.markdown(f"""
-### 💡 Summary
-
-Out of **{total} customers**, **{high} are at high risk of churning**.
-""")
-
-    # ---------------- CHURN DISTRIBUTION ---------------- #
+    # ---------------- CHART ---------------- #
     st.markdown("## 📊 Churn Risk Distribution")
 
     fig, ax = plt.subplots(figsize=(5,3))
@@ -197,17 +201,74 @@ Out of **{total} customers**, **{high} are at high risk of churning**.
 
     st.pyplot(fig)
 
-    high_count = (df['Churn Probability'] > 0.7).sum()
-    mid_count = ((df['Churn Probability'] > 0.4) & (df['Churn Probability'] <= 0.7)).sum()
-    low_count = (df['Churn Probability'] <= 0.4).sum()
+    # ---------------- EXACT CHART EXPLANATION ---------------- #
+    st.markdown("### 🧠 How to Read This Chart")
 
-    st.write(f"""
-🟢 Low Risk: {low_count}  
-🟡 Medium Risk: {mid_count}  
-🔴 High Risk: {high_count}  
+    st.markdown("""
+This chart shows how your customers are distributed based on their churn risk.
+
+---
+
+### 📈 What You're Seeing
+
+Each bar represents how many customers fall into a certain churn probability range.
+
+- Left side → Low risk customers  
+- Middle → Medium risk  
+- Right side → High risk customers  
+
+---
+
+### 🎯 How to Interpret It
+
+#### 🟢 If most customers are on the LEFT:
+- Your business is stable  
+- Customers are engaged  
+- Low immediate risk  
+
+---
+
+#### 🟡 If many are in the MIDDLE:
+- Warning zone  
+- Customers may churn soon  
+- Needs attention  
+
+---
+
+#### 🔴 If many are on the RIGHT:
+- Serious churn problem  
+- Immediate action needed  
+- Revenue at risk  
+
+---
+
+### 💡 What Good Looks Like
+
+- Majority of customers below 0.4  
+- Very few above 0.7  
+
+---
+
+### 🚨 What Bad Looks Like
+
+- Large cluster above 0.7  
+- Spread evenly across all ranges  
+
+---
+
+### ⚡ Key Insight
+
+This chart helps you understand:
+
+👉 “Is churn concentrated or widespread?”
+
+- Concentrated → easier to fix  
+- Widespread → deeper problem in product/business  
 """)
 
-    # ---------------- REVENUE AT RISK ---------------- #
+    st.info("💡 Tip: Focus on customers above 0.7 churn probability — they are most likely to leave soon.")
+
+    # ---------------- REVENUE ---------------- #
     st.markdown("## 📉 Revenue at Risk")
 
     risk_summary = df.groupby('Risk Level')['Monetary'].sum()
@@ -216,18 +277,17 @@ Out of **{total} customers**, **{high} are at high risk of churning**.
     if revenue_at_risk > 0:
         st.error(f"⚠️ ${revenue_at_risk:,.0f} revenue is at risk")
     else:
-        st.success("✅ No revenue is currently at risk")
+        st.success("✅ No revenue is at risk")
 
     # ---------------- ACTIONS ---------------- #
     st.markdown("## 🎯 What Should You Do?")
 
     if high > 0:
-        st.write(f"👉 Focus on {high} high-risk customers")
-        st.write("👉 Offer discounts or incentives")
-        st.write("👉 Re-engage inactive users")
-        st.write("👉 Prioritize high-value users")
+        st.write("👉 Target high-risk customers immediately")
+        st.write("👉 Offer discounts / incentives")
+        st.write("👉 Improve engagement")
     else:
-        st.write("✅ No urgent churn risk — focus on growth")
+        st.write("✅ Focus on growth strategies")
 
     # ---------------- GRID CARDS ---------------- #
     st.markdown("## 🔥 Customers You Should Act On")
@@ -239,37 +299,17 @@ Out of **{total} customers**, **{high} are at high risk of churning**.
     cols = st.columns(3)
 
     for i, (_, row) in enumerate(top_risk.iterrows()):
-        col = cols[i % 3]
-
-        with col:
+        with cols[i % 3]:
             st.markdown(f"""
             <div class="card">
-                <b>Customer</b><br><br>
-                🔴 Risk: <b>{row['Churn Probability']:.0%}</b><br>
-                📦 Orders: {int(row['Frequency'])}<br>
-                💰 Spend: ${row['Monetary']:.0f}<br><br>
-                👉 Action: Offer discount / re-engage
+            🔴 Risk: <b>{row['Churn Probability']:.0%}</b><br>
+            📦 Orders: {int(row['Frequency'])}<br>
+            💰 Spend: ${row['Monetary']:.0f}<br><br>
+            👉 Action: Retention campaign
             </div>
             """, unsafe_allow_html=True)
 
-    # ---------------- DOWNLOAD ---------------- #
-    csv = df.to_csv(index=False).encode('utf-8')
-
-    st.download_button(
-        "📥 Download Results",
-        csv,
-        "churn_results.csv",
-        "text/csv"
-    )
-
-# ---------------- HOW IT WORKS ---------------- #
+# ---------------- FOOTER ---------------- #
 st.markdown("---")
-st.markdown("## ⚙️ How It Works")
-
-st.write("""
-We simulate customer behavior, predict churn using machine learning,
-and highlight which customers you should focus on.
-""")
-
-st.caption("Built using customer behavior modeling (RFM + ML)")
+st.caption("Built as a decision tool for founders 🚀")
 st.write("Built by Vignesh M Naik | Data Science Project 🚀")
