@@ -57,7 +57,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------- HERO ---------------- #
-st.title("🚀 Stop Losing Customers Before It Happens")
+st.title(" Stop Losing Customers Before It Happens")
 
 st.write("""
 Understand which customers are likely to churn and what actions to take — instantly.
