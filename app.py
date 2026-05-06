@@ -222,7 +222,7 @@ variation = col4.slider(
 )
 
 # ---------------- GENERATE ---------------- #
-if st.button("🚀 Generate Insights"):
+if st.button("🔎Generate Insights"):
 
     np.random.seed(42)
 
